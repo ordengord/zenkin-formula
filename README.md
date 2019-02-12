@@ -1,1 +1,1 @@
-echo "# zenkin-formula"
+"# zenkin-formula"

@@ -34,7 +34,6 @@ class OperationTest extends TestCase
         parent::setUp();
     }
 
-
     /**
      * @test
      */
@@ -67,13 +66,14 @@ class OperationTest extends TestCase
     public function division_by_zero()
     {
         $divide = new Divide;
-        $result = $divide->calculate($three);
+        $result = $divide->calculate($this->two, $this->three);
     }
 
     /**
-     * @test
      * @expectedException LogarithmError
+     * @test
      */
+
     public function logarithm_error()
     {
         $natural = new NaturalLogarithm;

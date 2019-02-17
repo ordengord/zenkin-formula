@@ -22,7 +22,7 @@
   },
 
   "scripts": {
-    "phpunit": "vendor/bin/phpunit --colors=auto"
+    "phpunit": "vendor/bin/phpunit --colors=always"
   }
 
 }

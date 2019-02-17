@@ -9,16 +9,14 @@ use App\Operations\Auxiliary\RightBracket;
 use App\Exceptions\InvalidFormulaException;
 
 /**
- * Class PolishConverter
+ * Class RpnConverter
  *
  * @package App
  */
 class RpnConverter
 {
-    /***
-     * @var Formula
-     */
-    protected $formula;
+    protected $input;
+    protected $output;
 
     /**
      *
@@ -34,75 +32,65 @@ class RpnConverter
 
     /**
      * RpnConverter constructor.
-     * @param Formula $formula
+     * @param string
      */
-    public function __construct(Formula $formula)
+    public function __construct(string $input)
     {
-        $this->formula = $formula;
-
-        $infix = preg_split(
+        $this->input = preg_split(
             self::OPERATION_PATTERN,
-            $this->formula->getInfix(),
+            $input,
             -1,
             PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE
         );
-
-        try {
-            $this->convert($infix);
-        } catch (InvalidFormulaException $e) {
-            $formula->setErrorMessage($e->getMessage());
-        }
-
     }
 
     /**
      * Main converting method in RpnConverter
      *
-     * Using abstract class ComponentCreator, it creates objects of FormulaComponent in foreach cycle.
-     * Then proceeding with calling handlers for every possible subclass of FormulaComponent.
-     * When handling, FormulaComponent can be added into $stack or $formula->postfix
-     * Variables are added to the $formula->postfix immediately
-     * When the cycle is over, $stack is pushed onto the end of $formula->postfix
-     *
-     * @param String[]
-     * @return void
      * @throws InvalidFormulaException
      */
-    protected function convert(Array $infix)
+    public function convert()
     {
-        // Unary minus is possible in the beginning of expression and after the left bracket
-        $unaryMinusPossibility = true;
+        try {
+            // Unary minus is possible at the beginning of formula and after the left bracket
+            $unaryMinusPossibility = true;
 
-        foreach ($infix as $component) {
-            $component = ComponentFactory::createNewComponent($component, $unaryMinusPossibility);
-            $unaryMinusPossibility = false;
+            foreach ($this->input as $component) {
+                $component = ComponentFactory::createNewComponent($component, $unaryMinusPossibility);
+                $unaryMinusPossibility = false;
 
-            if ($component instanceof Variable) {
-                $this->formula->pushToPostfix($component);
-                continue;
+                if ($component instanceof Variable) {
+                    $this->output[] = $component;
+                    continue;
+                }
+
+                if ($component instanceof LeftBracket) {
+                    $this->handleLeftBracket($component);
+                    $unaryMinusPossibility = true;
+                    continue;
+                }
+
+                if ($component instanceof RightBracket) {
+                    $this->handleRightBracket();
+                    continue;
+                }
+
+                if ($component instanceof VariableOperation) {
+                    $this->handleOperation($component);
+                    continue;
+                }
             }
 
-            if ($component instanceof LeftBracket) {
-                $this->handleLeftBracket($component);
-                $unaryMinusPossibility = true;
-                continue;
-            }
+            if ($this->stackContainsOnlyOperations()) {
+                $this->output = array_merge($this->output, $this->stack);
+                return $this->output;
+            } else
+                throw new InvalidFormulaException("There are excessive left brackets in the formula");
 
-            if ($component instanceof RightBracket) {
-                $this->handleRightBracket();
-                continue;
-            }
-
-            if ($component instanceof VariableOperation) {
-                $this->handleOperation($component);
-                continue;
-            }
+        } catch (InvalidFormulaException $e) {
+            return $e->getMessage();
         }
 
-        if ($this->stackContainsOnlyOperations())
-            $this->formula->pushToPostfix($this->stack);
-        else
-            throw new InvalidFormulaException("There are excessive left brackets in the formula");
     }
 
     /**
@@ -118,7 +106,7 @@ class RpnConverter
             $operation->increasePriority(10 * $numLeftBrackets);
             foreach ($this->stack as $prevOperation) {
                 if ($prevOperation->getPriority() >= $operation->getPriority()) {
-                    $this->formula->pushToPostfix($prevOperation);
+                    $this->output[] = $prevOperation;
                     array_shift($this->stack);
                 }
             }
@@ -148,7 +136,7 @@ class RpnConverter
                 array_shift($this->stack);
                 return;
             } else {
-                $this->formula->pushToPostfix($prevOperation);
+                array_push($this->output, $prevOperation);
                 array_shift($this->stack);
             }
         }

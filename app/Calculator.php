@@ -16,10 +16,6 @@ class Calculator
      * @var \App\Formula
      */
     protected $formula;
-    /**
-     * @var float
-     */
-    protected $result;
 
     /**
      * Calculator constructor.
@@ -40,20 +36,20 @@ class Calculator
         try {
             foreach ($this->formula->getPostfix() as $component) {
                 if ($component instanceof Variable)
+                    //$calculator[] = $component;
                     array_push($calculator, $component);
 
                 if ($component instanceof TwoVariableOperation) {
-                    if ($calculator[count($calculator) - 2] instanceof Variable && $calculator[count($calculator) - 1] instanceof Variable) {
+                    if (count($calculator) >= 2) {
                         $result = $component->calculate($calculator[count($calculator) - 2], $calculator[count($calculator) - 1]);
                         $calculator[count($calculator) - 2]->setValue($result);
                         array_pop($calculator);
                     } else
                         throw new CalculationException();
-
                 }
 
                 if ($component instanceof OneVariableOperation) {
-                    if ($calculator[count($calculator) - 1] instanceof Variable) {
+                    if (count($calculator) >= 1) {
                         $result = $component->calculate($calculator[count($calculator) - 1]);
                         $calculator[count($calculator) - 1]->setValue($result);
                     } else

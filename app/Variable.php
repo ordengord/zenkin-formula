@@ -52,12 +52,4 @@ class Variable implements FormulaComponent
     {
         $this->value = $value;
     }
-
-    /**
-     * @return string
-     */
-    public function __toString()
-    {
-        return $this->symbol;
-    }
 }

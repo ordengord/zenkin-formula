@@ -4,6 +4,7 @@ namespace App;
 
 use App\Interfaces\FormulaComponent;
 use App\Operations\VariableOperation;
+use phpDocumentor\Reflection\Types\Array_;
 
 class Formula
 {
@@ -35,9 +36,14 @@ class Formula
         $input = str_replace(" ", "", $input);
         $input = str_replace(',', '.', $input);
         $this->infix = $input;
-        $converter = new RpnConverter($this);
     }
 
+    public function convert()
+    {
+        $converter = new RpnConverter($this->infix);
+        $result = $converter->convert();
+        is_string($result) ? $this->errorMessage = $result : $this->postfix = $result;
+    }
     /**
      * @return string
      */
@@ -57,6 +63,18 @@ class Formula
     /**
      * @return string
      */
+    public function getError()
+    {
+        return $this->errorMessage;
+    }
+
+    /**
+     * @return string
+     * For dev
+     * Planned to be replaced with the function below,
+     * as there seems to be no much sense in postfix string
+     */
+
     public function __toString()
     {
         $postfix = "";
@@ -64,6 +82,11 @@ class Formula
             $postfix .= $component->getSymbol();
         return $postfix;
     }
+
+    /*public function __toString() //
+    {
+        return $this->isFormulaValid() ? $this->infix : $this->errorMessage;
+    }*/
 
     /**
      * @return Variable[]
@@ -103,7 +126,7 @@ class Formula
      * @param string $symbol
      * @return Variable | Variable[]
      */
-    public function findVariableByName($symbol)
+    public function findVariableByName(string $symbol)
     {
         $variables = array_filter($this->postfix, function ($variable) use ($symbol) {
             return $variable->getSymbol() == $symbol;
@@ -115,59 +138,40 @@ class Formula
     /**
      * Sets value for a variable or array of variables with the same symbol
      *
-     * @param array|Variable $variables
-     * @param float|int $value
+     * @param array|Variable $variable
+     * @param float $value
      */
-    public function setVariableValue($variables, $value)
+    public function setVariableValue($variable, float $value)
     {
-        if ($variables instanceof \ErrorException)
-            return;
-
-        if ($variables instanceof Variable)
-            $variables->setValue($value);
-        else
-            array_walk($variables, function ($var) use ($value) {
+        if (is_array($variable))
+            array_walk($variable, function ($var) use ($value) {
                 $var->setValue($value);
             });
+        else
+            $variable->setValue($value);
     }
 
     /**
-     * Checks if all variables in expression have numerical values
-     * @return bool
+     * @param array
+     * @return void
      */
-    protected function eachVariableHasCorrectValue()
+    public function setValues(array $variables)
     {
-        foreach ($this->postfix as $variable) {
-            if (($variable instanceof Variable) && ($variable->getValue() === null || !is_numeric($variable->getValue())))
-                return false;
+        foreach ($variables as $symbol => $value){
+            $this->setVariableValue($this->findVariableByName($symbol), $value);
         }
-        return true;
-    }
-
-    /**
-     * A function to manipulate postfix by RpnConverter
-     * @see RpnConverter
-     * @param FormulaComponent|FormulaComponent[] $component
-     */
-    public function pushToPostfix($component)
-    {
-        $component instanceof FormulaComponent
-            ? array_push($this->postfix, $component)
-            : $this->postfix = array_merge($this->postfix, $component);
     }
 
     /**
      * @param string
      * @return void
      */
-    public function setErrorMessage(string $message)
+    public function setErrorMessage(string $msg)
     {
-        $this->errorMessage = $message;
+        $this->errorMessage = $msg;
     }
 
     /**
-     * Checks if postfix contains only Variable and VariableOperation
-     *
      * to be reconsidered
      * @return bool
      */
